@@ -3,10 +3,12 @@
 set -euo pipefail
 VERSION=0.1.0
 fail() { printf '%s\n' "$*"; exit 1; }
-NONE=$'\31'NONE
 
 print_usage() {
-  echo usage goes here
+  cat <<EOF
+Usage information
+
+EOF
 }
 
 ##
@@ -20,6 +22,12 @@ handle_argument() {
     o|oops)
       echo "oopies $value!"
       ;;
+    a)
+      echo "set a" ;;
+    b)
+      echo "set b" ;;
+    C)
+      echo "set C" ;;
     h|help)
       print_usage
       exit 0
@@ -41,7 +49,9 @@ handle_positionals() {
 
 parse_args() {
   local quot_word="\"(.*)\"|'(.*)'|(.*)"
+  # Matches single char args e.g. -a or groups of args e.g. -abx
   local single_dash_argument="^-([^[:blank:]]+)$"
+  # Matches a double dash argument that may or may not have a value
   local double_dash_argument="^--([^[:blank:]=]+)($|=)($quot_word)?"
   local arg name next_arg value
   local args=("$@")
@@ -55,10 +65,7 @@ parse_args() {
       # sign, e.g. --output=filename. It handles quotes around the argument.
       name="${BASH_REMATCH[1]}"
       if [[ -n ${BASH_REMATCH[2]} ]]; then
-        # The value will be one of the three capture groups that handle double
-        # quotes, single quotes, or no quotes. Only one group can match at a
-        # time, so concatenating is the easiest way to get the value for any
-        # kind of quoting.
+        # The value of the quoted/unquoted string ends up in one of three groups
         value="${BASH_REMATCH[4]}${BASH_REMATCH[5]}${BASH_REMATCH[6]}"
         handle_argument -- "$name" "$value"
       else
@@ -80,6 +87,7 @@ parse_args() {
           handle_argument - "${name:$k:1}"
         done
       else
+        # Don't pass a value if on the last arg or if the next arg is an option
         if (( i + 1 == $# )) || [[ $next_arg == -* ]]; then
           handle_argument - "$name"
         else
