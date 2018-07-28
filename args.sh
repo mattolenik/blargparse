@@ -9,56 +9,58 @@
 # $2  name of the function to handle positionals
 # ..  remaining are the arguments to parse
 parse_args() {
-  local handle_option=$1 handle_positionals=$2
+  local pa_handle_option=$1 pa_positionals_var_name=$2
   shift 2
-  local quot_word="\"(.*)\"|'(.*)'|(.*)"
+  local pa_quot_word="\"(.*)\"|'(.*)'|(.*)"
   # Matches single char opts e.g. -a or groups of opts e.g. -abx
-  local single_dash_option="^-([^[:blank:]]+)$"
+  local pa_single_dash_option="^-([^[:blank:]]+)$"
   # Matches a double dash option that may or may not have a value
-  local double_dash_option="^--([^[:blank:]=]+)($|=)($quot_word)?"
-  local name next_arg opt value
-  local args=("$@") positionals=()
+  local pa_double_dash_option="^--([^[:blank:]=]+)($|=)($pa_quot_word)?"
+  local pa_name pa_next_arg pa_opt pa_value
+  local pa_args=("$@")
+  eval "declare -a -g $pa_positionals_var_name"
   local i=0
   while (( i < $# )); do
-    opt="${args[$i]}"
-    next_arg="${args[$i+1]:-}"
-    if [[ $opt =~ $double_dash_option ]]; then
+    pa_opt="${pa_args[$i]}"
+    pa_next_arg="${pa_args[$i+1]:-}"
+    if [[ $pa_opt =~ $pa_double_dash_option ]]; then
       # This if block handles the case of double-dash options with an equals
       # sign, e.g. --output=filename. It handles quotes around the option.
-      name="${BASH_REMATCH[1]}"
+      pa_name="${BASH_REMATCH[1]}"
       if [[ -n ${BASH_REMATCH[2]} ]]; then
         # The value of the quoted/unquoted string ends up in one of three groups
-        value="${BASH_REMATCH[4]}${BASH_REMATCH[5]}${BASH_REMATCH[6]}"
-        $handle_option -- "$name" "$value"
+        pa_value="${BASH_REMATCH[4]}${BASH_REMATCH[5]}${BASH_REMATCH[6]}"
+        $pa_handle_option -- "$pa_name" "$pa_value"
       else
         # If the next option isn't another option (doesn't begin with
         # a dash), treat it as the value for the current option.
-        if (( i + 1 == $# )) || [[ $next_arg == -* ]]; then
-          $handle_option -- "$name"
+        if (( i + 1 == $# )) || [[ $pa_next_arg == -* ]]; then
+          $pa_handle_option -- "$pa_name"
         else
-          $handle_option -- "$name" "${args[@]:1}"
+          $pa_handle_option -- "$pa_name" "${pa_args[@]:1}"
           i=$((i + $?))
         fi
       fi
-    elif [[ "$opt" =~ $single_dash_option ]]; then
+    elif [[ "$pa_opt" =~ $pa_single_dash_option ]]; then
       # This elif block handles single-letter opts and groups of opts,
       # e.g. '-o "filename"' or '-vfd' which becomes -v -f -d
-      name="${BASH_REMATCH[1]}"
+      pa_name="${BASH_REMATCH[1]}"
       # Groups of options can't have values, except for the last one.
-      for (( k=0; k < ${#name} - 1; k++ )); do
-        $handle_option - "${name:$k:1}"
+      for (( k=0; k < ${#pa_name} - 1; k++ )); do
+        $pa_handle_option - "${pa_name:$k:1}"
       done
       # Don't pass a value if on the last opt or if the next opt is an option
-      if (( i + 1 == $# )) || [[ $next_arg == -* ]]; then
-        $handle_option - "${name: -1}"
+      if (( i + 1 == $# )) || [[ $pa_next_arg == -* ]]; then
+        $pa_handle_option - "${pa_name: -1}"
       else
-        $handle_option - "${name: -1}" "${args[@]:1}"
+        $pa_handle_option - "${pa_name: -1}" "${pa_args[@]:1}"
         i=$((i + $?))
       fi
     else
-      positionals+=("$opt")
+      eval "$pa_positionals_var_name+=(\"$pa_opt\")"
     fi
     i=$((i + 1))
   done
-  $handle_positionals "${positionals[@]}"
+  # shellcheck disable=SC2145
+  eval "$pa_positionals_var_name=(\"${positionals[@]}\")"
 }

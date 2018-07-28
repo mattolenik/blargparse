@@ -2,20 +2,16 @@
 IS_TEST=true
 source args.sh
 
-arguments=()
+options=()
 positionals=()
 
 @test "test" {
-  args=(-a -b --test=abc)
-  parse_args handle_argument handle_positionals "${args[@]}"
-  echo ${arguments[@]} 1>&2
+  test_args=(-a -b --test=abc pos1 pos2)
+  parse_args handle_options positionals "${test_args[@]}"
+  [[ ${options[*]} == "-a= -b= --test=abc" ]]
+  [[ ${positionals[*]} == "pos1 pos2" ]]
 }
 
-handle_argument() {
-  arguments+=(${1}${2}${3:-})
-  echo $* &> test.out
-}
-
-handle_positionals() {
-  positionals="$@"
+handle_options() {
+  options+=(${1}${2}=${3:-})
 }
