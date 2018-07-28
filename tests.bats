@@ -6,10 +6,11 @@ options=()
 positionals=()
 
 @test "test" {
-  test_args=(-a -b --test=abc pos1 pos2)
+  test_args=(pos1 -a -b --test pos3 pos4)
   parse_args handle_options positionals "${test_args[@]}"
-  [[ ${options[*]} == "-a= -b= --test=abc" ]]
-  [[ ${positionals[*]} == "pos1 pos2" ]]
+  echo ${options[@]} > test.out
+  [[ ${options[*]} == "-a= -b= --test=pos3" ]]
+  [[ ${positionals[*]} == "pos1 pos3 pos4" ]]
 }
 
 handle_options() {
