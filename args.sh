@@ -32,6 +32,7 @@ parse_args() {
         _value="${BASH_REMATCH[4]}${BASH_REMATCH[5]}${BASH_REMATCH[6]}"
         $_handle_option -- "$_name" "$_value"
       else
+        set +e
         # If the next option isn't another option (doesn't begin with
         # a dash), treat it as the value for the current option.
         if (( i + 1 == $# )) || [[ $_next_arg == -* ]]; then
@@ -40,11 +41,13 @@ parse_args() {
           $_handle_option -- "$_name" "${_args[@]:$i+1:1}"
           i=$((i + $?))
         fi
+        set -e
       fi
     elif [[ "$_arg" =~ $_single_dash_option ]]; then
       # This elif block handles single-letter opts and groups of opts,
       # e.g. '-o "filename"' or '-vfd' which becomes -v -f -d
       _name="${BASH_REMATCH[1]}"
+      set +e
       # Groups of options can't have values, except for the last one.
       for (( k=0; k < ${#_name} - 1; k++ )); do
         $_handle_option - "${_name:$k:1}"
@@ -56,6 +59,7 @@ parse_args() {
         $_handle_option - "${_name: -1}" "${_args[@]:$i+1:1}"
         i=$((i + $?))
       fi
+      set -e
     else
       eval "$_positionals_var_name+=(\"$_arg\")"
     fi
