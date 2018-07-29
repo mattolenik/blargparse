@@ -16,12 +16,11 @@ parse_args() {
   # Matches a double dash option that may or may not have a value
   local _double_dash_option="^--([^[:blank:]=]+)($|=)($_quot_word)?"
   local _name _next_arg _arg _value
-  local _args=("$@")
+  local _args=("$@") __i=0 __k=0
   eval "declare -a -g $_positionals_var_name"
-  local i=0
-  while (( i < $# )); do
-    _arg="${_args[$i]}"
-    _next_arg="${_args[$i+1]:-}"
+  while (( __i < $# )); do
+    _arg="${_args[$__i]}"
+    _next_arg="${_args[$__i+1]:-}"
     if [[ $_arg =~ $_double_dash_option ]]; then
       # This if block handles the case of double-dash options with an equals
       # sign, e.g. --output=filename. It handles quotes around the option.
@@ -33,10 +32,10 @@ parse_args() {
       else
         # If the next option isn't another option (doesn't begin with
         # a dash), treat it as the value for the current option.
-        if (( i + 1 == $# )) || [[ $_next_arg == -* ]]; then
+        if (( __i + 1 == $# )) || [[ $_next_arg == -* ]]; then
           $_handle_option -- "$_name" || true
         else
-          $_handle_option -- "$_name" "${_args[@]:$i+1:1}" || i=$((i + $?))
+          $_handle_option -- "$_name" "${_args[@]:$__i+1:1}" || __i=$((__i + $?))
         fi
       fi
     elif [[ "$_arg" =~ $_single_dash_option ]]; then
@@ -44,18 +43,18 @@ parse_args() {
       # e.g. '-o "filename"' or '-vfd' which becomes -v -f -d
       _name="${BASH_REMATCH[1]}"
       # Groups of options can't have values, except for the last one.
-      for (( k=0; k < ${#_name} - 1; k++ )); do
-        $_handle_option - "${_name:$k:1}" || true
+      for (( __k=0; __k < ${#_name} - 1; __k++ )); do
+        $_handle_option - "${_name:$__k:1}" || true
       done
       # Don't pass a value if on the last arg or if the next arg is an option
-      if (( i + 1 == $# )) || [[ $_next_arg == -* ]]; then
+      if (( __i + 1 == $# )) || [[ $_next_arg == -* ]]; then
         $_handle_option - "${_name: -1}" || true
       else
-        $_handle_option - "${_name: -1}" "${_args[@]:$i+1:1}" || i=$((i + $?))
+        $_handle_option - "${_name: -1}" "${_args[@]:$__i+1:1}" || __i=$((__i + $?))
       fi
     else
       eval "$_positionals_var_name+=(\"$_arg\")"
     fi
-    i=$((i + 1))
+    __i=$((__i + 1))
   done
 }
