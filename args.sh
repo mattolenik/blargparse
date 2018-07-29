@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 [[ -n ${TRACE:-} ]] && set -x
-[[ -z ${IS_TEST:-} ]] && set -euo pipefail
 
 ##
 # Parses command-line arguments
@@ -30,41 +29,33 @@ parse_args() {
       if [[ -n ${BASH_REMATCH[2]} ]]; then
         # The value of the quoted/unquoted string ends up in one of three groups
         _value="${BASH_REMATCH[4]}${BASH_REMATCH[5]}${BASH_REMATCH[6]}"
-        $_handle_option -- "$_name" "$_value"
+        $_handle_option -- "$_name" "$_value" || true
       else
-        set +e
         # If the next option isn't another option (doesn't begin with
         # a dash), treat it as the value for the current option.
         if (( i + 1 == $# )) || [[ $_next_arg == -* ]]; then
-          $_handle_option -- "$_name"
+          $_handle_option -- "$_name" || true
         else
-          $_handle_option -- "$_name" "${_args[@]:$i+1:1}"
-          i=$((i + $?))
+          $_handle_option -- "$_name" "${_args[@]:$i+1:1}" || i=$((i + $?))
         fi
-        set -e
       fi
     elif [[ "$_arg" =~ $_single_dash_option ]]; then
       # This elif block handles single-letter opts and groups of opts,
       # e.g. '-o "filename"' or '-vfd' which becomes -v -f -d
       _name="${BASH_REMATCH[1]}"
-      set +e
       # Groups of options can't have values, except for the last one.
       for (( k=0; k < ${#_name} - 1; k++ )); do
-        $_handle_option - "${_name:$k:1}"
+        $_handle_option - "${_name:$k:1}" || true
       done
       # Don't pass a value if on the last arg or if the next arg is an option
       if (( i + 1 == $# )) || [[ $_next_arg == -* ]]; then
-        $_handle_option - "${_name: -1}"
+        $_handle_option - "${_name: -1}" || true
       else
-        $_handle_option - "${_name: -1}" "${_args[@]:$i+1:1}"
-        i=$((i + $?))
+        $_handle_option - "${_name: -1}" "${_args[@]:$i+1:1}" || i=$((i + $?))
       fi
-      set -e
     else
       eval "$_positionals_var_name+=(\"$_arg\")"
     fi
     i=$((i + 1))
   done
-  # shellcheck disable=SC2145
-  eval "$_positionals_var_name=(\"${positionals[@]}\")"
 }
