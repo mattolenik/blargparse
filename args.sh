@@ -17,7 +17,7 @@ parse_args() {
   local _double_dash_option="^--([^[:blank:]=]+)($|=)($_quot_word)?"
   local _name _next_arg _arg _value
   local _args=("$@") __i=0 __k=0
-  eval "declare -a -g $_positionals_var_name"
+  declare -a -g "$_positionals_var_name"
   while (( __i < $# )); do
     _arg="${_args[$__i]}"
     _next_arg="${_args[$__i+1]:-}"
