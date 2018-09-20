@@ -5,7 +5,7 @@
 # Parses command-line arguments
 # Parameters:
 # $1  name of the function to handle options
-# $2  name of the function to handle positionals
+# $2  name of the variable to contain array of positionals
 # ..  remaining are the arguments to parse
 parse_args() {
   local _handle_option=$1 _positionals_var_name=$2
