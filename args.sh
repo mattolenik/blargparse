@@ -1,5 +1,5 @@
-#!/usr/bin/env bash
-[[ -n ${TRACE:-} ]] && set -x
+# shellcheck shell=bash
+[[ -n "${__ARGS_SH__:-}" ]] && return || __ARGS_SH__=1 # multiple source guard
 
 ##
 # Parses command-line arguments
@@ -71,4 +71,64 @@ check_opt() {
   if  [[ -n ${3:-} ]]; then
     [[ $2 =~ $3 ]] || echo "${4:-The value provided for option $2 is not valid}" 1>&2 && return 2
   fi
+}
+
+##
+# Prompt the user and wait for an answer. An optional default value
+# can be returned when the user skips the question by pressing ENTER.
+##
+# $1 - Output variable that will contain the result
+# $2 - Question string, without indicating options yourself. For example,
+#      don't pass in "Question? (y/n)", just "Question?". The options will be
+#      added automatically.
+# $3 - Options for the prompt, as a space-separated list. Use * for freeform
+#      input. Options are automatically lowercase only.
+# $4 - Default value, optional
+##
+ask() {
+  # Var names are somewhat obfuscated to reduce collision with out var name
+  local _question_arg_="2"
+  local _options_arg_="3"
+  local _default_var_="4"
+  local _answer_
+
+  # If AUTO_APPROVE is set, just return the default.
+  if [[ -n ${AUTO_APPROVE:-} ]]; then
+    read -r "$1" <<< "${!_default_var_:-}"
+    return
+  fi
+
+  local _choices_="${!_options_arg_+${!_options_arg_// /\/} }"
+  # If default is set and not empty
+  if [[ -n "${!_default_var_:-}" ]]; then
+    if [[ ${!_options_arg_:-*} == * ]]; then
+      _choices_="[${!_default_var_}] "
+    elif [[ $_choices_ != *"${!_default_var_}"* ]]; then
+      echo "Default value does not appear in the options list" && return 3
+    else
+      # Make the default option appear in uppercase
+      _choices_="(${_choices_/${!_default_var_}/${!_default_var_^^}})"
+    fi
+  fi
+
+  # Loop until valid input is received
+  while true; do
+    read -rp "${!_question_arg_} ${_choices_:-}" _answer_
+    _answer_="${_answer_:-${!_default_var_:-}}"
+    if [[ ${!_options_arg_:-*} == "*" ]]; then
+      # Populate the user-passed in variable
+      read -r "$1" <<< "$_answer_"
+      return
+    fi
+    # Trim and collapse whitespace and convert to lowercase
+    local normal_opts
+    normal_opts="$(printf %s "${!_options_arg_}" | xargs echo -n | awk '{print tolower($0)}')"
+    local opt_pattern='^('"${normal_opts// /|}"')$'
+    if [[ $_answer_ =~ $opt_pattern ]]; then
+      read -r "$1" <<< "$_answer_"
+      return
+    else
+      echo "ERROR: Invalid option, must be one of: ${normal_opts// /, }"
+    fi
+  done
 }
